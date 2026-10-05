@@ -1,0 +1,36 @@
+name: Daily Stock Monitoring (21:00 KST)
+
+on:
+  schedule:
+    # 한국 시간(KST, UTC+9) 저녁 9시 = UTC 12:00
+    - cron: '0 12 * * *'
+  workflow_dispatch: # GitHub 웹 화면에서 수동으로 'Run workflow' 버튼을 눌러 언제든 즉시 실행 가능
+
+jobs:
+  run-monitoring:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 파이썬 3.11 환경 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 필수 라이브러리 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 주식 모니터링 및 텔레그램 알림 실행
+        env:
+          # GitHub Secrets에 등록된 경우 환경변수로 주입 (없으면 config.json 사용)
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python main.py

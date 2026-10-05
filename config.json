@@ -1,0 +1,25 @@
+{
+  "spreadsheet_id": "1IltiEQbgvKzRspc-H6aS3jXeBtKVukSlIsUfpMj_W98",
+  "sheets": {
+    "한국주식": {
+      "gid": "383867058",
+      "market": "KR"
+    },
+    "미국주식": {
+      "gid": "1558273916",
+      "market": "US"
+    }
+  },
+  "webhook_url": "https://script.google.com/macros/s/AKfycbyQgzTKJ8QfPeKFikR5E9wYohd0egHEMzdp0uObIF47BPg85YRybXVzIC4PGXyAOhwN/exec",
+  "telegram": {
+    "bot_token": "8744866978:AAEb8gtVWi_k6YTdJLLEYemvephifbQ3_jU",
+    "chat_id": "1982230304"
+  },
+  "analysis_settings": {
+    "min_consensus_change_pct": 3.0,
+    "ma_proximity_percent": 1.2,
+    "resistance_proximity_percent": 1.5,
+    "support_proximity_percent": 1.5,
+    "lookback_days": 60
+  }
+}
