@@ -1,9 +1,9 @@
-name: Daily Stock Monitoring (21:00 KST)
+name: Daily Stock Monitoring (21:07 KST)
 
 on:
   schedule:
-    # 한국 시간(KST, UTC+9) 저녁 9시 = UTC 12:00
-    - cron: '0 12 * * *'
+    # 한국 시간(KST, UTC+9) 저녁 9시 7분 = UTC 12:07 (정각 트래픽 몰림 방지)
+    - cron: '7 12 * * *'
   workflow_dispatch: # GitHub 웹 화면에서 수동으로 'Run workflow' 버튼을 눌러 언제든 즉시 실행 가능
 
 jobs:
