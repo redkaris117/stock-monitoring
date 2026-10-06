@@ -17,6 +17,49 @@ def parse_price(raw_val: Any) -> Optional[float]:
     except ValueError:
         return None
 
+def extract_date_from_str(text: str) -> Optional[datetime]:
+    """
+    문자열에서 날짜((YYYY-MM-DD), (MM/DD), YYYY-MM-DD 등)를 추출합니다.
+    """
+    if not text:
+        return None
+    # 1. 괄호 안의 전체 날짜: (2026-10-06), (2026.10.06) 등
+    matches_full = list(re.finditer(r"\((\d{4})[./-](\d{1,2})[./-](\d{1,2})\)", text))
+    if matches_full:
+        m = matches_full[-1]
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+
+    # 2. 괄호 안의 월/일 날짜: (10/06), (10.06), (10-06)
+    matches_short = list(re.finditer(r"\((\d{1,2})[./-](\d{1,2})\)", text))
+    if matches_short:
+        m = matches_short[-1]
+        try:
+            month = int(m.group(1))
+            day = int(m.group(2))
+            now = datetime.now()
+            year = now.year
+            # 연도 롤오버 처리 (현재 1월이고 기록이 12월인 경우 등)
+            if now.month == 1 and month == 12:
+                year -= 1
+            elif now.month == 12 and month == 1:
+                year += 1
+            return datetime(year, month, day)
+        except ValueError:
+            pass
+
+    # 3. 단독 ISO 형식 날짜: 2026-10-06 (기준일자 열 등)
+    m_iso = re.search(r"\b(\d{4})[./-](\d{1,2})[./-](\d{1,2})\b", text)
+    if m_iso:
+        try:
+            return datetime(int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3)))
+        except ValueError:
+            pass
+
+    return None
+
 # 연한 파스텔 톤 배경색 팔레트 정의
 COLOR_CONSENSUS_UP = "#E6F4EA"     # 연한 파스텔 녹색1 (목표가 상향)
 COLOR_CONSENSUS_DOWN = "#FCE8E6"   # 연한 파스텔 적색/분홍1 (목표가 하향)
@@ -92,6 +135,8 @@ def evaluate_consensus_change(
     # 1) 목표주가 변동 내용 및 배경색 (목표주가 변동사항 열용)
     consensus_note = ""
     consensus_bg_color = None
+    existing_cn = (stock_in_sheet.get("consensus_note") or stock_in_sheet.get("목표주가 변동사항") or "").strip()
+
     if is_changed:
         if change_type in ["상향(▲)", "하향(▼)"]:
             old_str = f"{curr_symbol}{int(old_tp):,}" if market == "KR" else f"{curr_symbol}{old_tp:.2f}"
@@ -104,11 +149,27 @@ def evaluate_consensus_change(
             consensus_note = f"[신규] {new_str} ({today_short})"
             consensus_bg_color = COLOR_CONSENSUS_NEW
     else:
-        existing_cn = stock_in_sheet.get("목표주가 변동사항", "")
-        if not existing_cn or existing_cn == "-":
-            consensus_note = f"[컨센서스 유지] ({today_short})"
+        # 특별한 변동이 없는 날: 최근 업데이트 건 1주일(7일) 유지 로직
+        is_recent_update = any(tag in existing_cn for tag in ["[상향", "[하향", "[신규"])
+        if is_recent_update:
+            note_date = extract_date_from_str(existing_cn) or extract_date_from_str(stock_in_sheet.get("date", ""))
+            days_diff = (datetime.now().date() - note_date.date()).days if note_date else 0
+            if days_diff < 7:
+                # 1주일(7일) 이내: 최근 업데이트 내용 및 배경색 그대로 유지 (시트 수정 건너뜀)
+                consensus_note = ""
+                consensus_bg_color = None
+            else:
+                # 1주일 경과: 1주일간 새로운 변경이 없었으므로 [컨센서스 유지]로 전환 및 배경색 초기화
+                consensus_note = f"[컨센서스 유지] ({today_short})"
+                consensus_bg_color = ""
         else:
-            consensus_note = "" # 기존 기록 보존
+            # 기존에 변동 기록이 없거나 이미 [컨센서스 유지]였던 경우
+            if not existing_cn or existing_cn == "-":
+                consensus_note = f"[컨센서스 유지] ({today_short})"
+                consensus_bg_color = ""
+            else:
+                consensus_note = ""  # 기존 [컨센서스 유지] 기록 유지
+                consensus_bg_color = None
 
     # 2) 기술적 분석 코멘트 및 배경색 (차트 기술적 분석 사항 열용)
     timing_comment = tech_analysis.get("timing_comment", "")
@@ -125,7 +186,8 @@ def evaluate_consensus_change(
     else:
         tech_note = f"[중립/관망] {timing_comment} ({today_short})"
 
-    full_update_note = (consensus_note + " / " if consensus_note else "") + tech_note
+    display_cn = consensus_note if consensus_note else existing_cn
+    full_update_note = (display_cn + " / " if display_cn else "") + tech_note
 
     # 시트 업데이트 페이로드
     sheet_update_item = {
@@ -138,7 +200,7 @@ def evaluate_consensus_change(
     }
     if consensus_note:
         sheet_update_item["consensus_note"] = consensus_note
-        if consensus_bg_color:
+        if consensus_bg_color is not None:
             sheet_update_item["consensus_bg_color"] = consensus_bg_color
     
     if new_tp:
