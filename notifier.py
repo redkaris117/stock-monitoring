@@ -2,6 +2,15 @@ import requests
 from typing import List, Dict, Any
 from datetime import datetime
 
+def get_currency_symbol(code: str, market: str) -> str:
+    if market == "KR":
+        return "₩"
+    if ".HK" in code:
+        return "HK$"
+    if any(x in code for x in [".SS", ".SZ"]):
+        return "¥"
+    return "$"
+
 def format_telegram_report(
     date_str: str,
     consensus_changes: List[Dict[str, Any]],
@@ -24,7 +33,7 @@ def format_telegram_report(
             code = c["code"]
             ch_type = c["change_type"]
             sheet = c["sheet"]
-            symbol = "₩" if c["market"] == "KR" else "$"
+            symbol = get_currency_symbol(code, c["market"])
             
             old_str = f"{symbol}{int(c['old_tp']):,}" if c["market"] == "KR" and c.get("old_tp") else (f"{symbol}{c['old_tp']:.2f}" if c.get("old_tp") else "-")
             new_str = f"{symbol}{int(c['new_tp']):,}" if c["market"] == "KR" and c.get("new_tp") else (f"{symbol}{c['new_tp']:.2f}" if c.get("new_tp") else "-")
@@ -51,6 +60,7 @@ def format_telegram_report(
             lines.append("\n🟢 <b>[지지선 안착 / 분할 매수 타점]</b>")
             kr_buy = [s for s in buy_list if s["market"] == "KR"]
             us_buy = [s for s in buy_list if s["market"] == "US"]
+            cn_buy = [s for s in buy_list if s["market"] == "CN"]
             if kr_buy:
                 lines.append(" <b>[국내]</b>")
                 for s in kr_buy:
@@ -59,11 +69,17 @@ def format_telegram_report(
                 lines.append(" <b>[미국]</b>")
                 for s in us_buy:
                     lines.append(f"  • <b>{s['name']}</b> (${s['curr_price']:.2f}): {s['tech_comment']}")
+            if cn_buy:
+                lines.append(" <b>[중국/홍콩]</b>")
+                for s in cn_buy:
+                    sym = get_currency_symbol(s["code"], s["market"])
+                    lines.append(f"  • <b>{s['name']}</b> ({sym}{s['curr_price']:.2f}): {s['tech_comment']}")
 
         if sell_list:
             lines.append("\n🔴 <b>[전고점 저항 근접 / 분할 익절 고려]</b>")
             kr_sell = [s for s in sell_list if s["market"] == "KR"]
             us_sell = [s for s in sell_list if s["market"] == "US"]
+            cn_sell = [s for s in sell_list if s["market"] == "CN"]
             if kr_sell:
                 lines.append(" <b>[국내]</b>")
                 for s in kr_sell:
@@ -72,11 +88,17 @@ def format_telegram_report(
                 lines.append(" <b>[미국]</b>")
                 for s in us_sell:
                     lines.append(f"  • <b>{s['name']}</b> (${s['curr_price']:.2f}): {s['tech_comment']}")
+            if cn_sell:
+                lines.append(" <b>[중국/홍콩]</b>")
+                for s in cn_sell:
+                    sym = get_currency_symbol(s["code"], s["market"])
+                    lines.append(f"  • <b>{s['name']}</b> ({sym}{s['curr_price']:.2f}): {s['tech_comment']}")
 
         if risk_list:
             lines.append("\n⚠️ <b>[주요 이평선 이탈 주의]</b>")
             kr_risk = [s for s in risk_list if s["market"] == "KR"]
             us_risk = [s for s in risk_list if s["market"] == "US"]
+            cn_risk = [s for s in risk_list if s["market"] == "CN"]
             if kr_risk:
                 lines.append(" <b>[국내]</b>")
                 for s in kr_risk:
@@ -85,6 +107,11 @@ def format_telegram_report(
                 lines.append(" <b>[미국]</b>")
                 for s in us_risk:
                     lines.append(f"  • <b>{s['name']}</b> (${s['curr_price']:.2f}): {s['tech_comment']}")
+            if cn_risk:
+                lines.append(" <b>[중국/홍콩]</b>")
+                for s in cn_risk:
+                    sym = get_currency_symbol(s["code"], s["market"])
+                    lines.append(f"  • <b>{s['name']}</b> ({sym}{s['curr_price']:.2f}): {s['tech_comment']}")
     else:
         lines.append("• 주요 이평선(20일/60일선) 또는 전고점/전저점 임계치(±2%)에 근접한 종목이 없습니다.")
 

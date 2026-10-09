@@ -8,6 +8,10 @@
     "미국주식": {
       "gid": "1558273916",
       "market": "US"
+    },
+    "중국주식": {
+      "gid": "377299310",
+      "market": "CN"
     }
   },
   "webhook_url": "https://script.google.com/macros/s/AKfycbyQgzTKJ8QfPeKFikR5E9wYohd0egHEMzdp0uObIF47BPg85YRybXVzIC4PGXyAOhwN/exec",

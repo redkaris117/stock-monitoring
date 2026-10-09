@@ -121,10 +121,18 @@ def get_us_stock_info(ticker: str) -> Optional[Dict[str, Any]]:
             target_price = float(target_price)
 
         consensus_date = datetime.now().strftime("%Y-%m-%d")
-        source = "월가 컨센서스"
+        if ".HK" in clean_ticker:
+            m_code = "CN"
+            source = "글로벌 컨센서스 / 홍콩"
+        elif any(x in clean_ticker for x in [".SS", ".SZ"]):
+            m_code = "CN"
+            source = "글로벌 컨센서스 / 중국본토"
+        else:
+            m_code = "US"
+            source = "월가 컨센서스"
 
         return {
-            "market": "US",
+            "market": m_code,
             "code": clean_ticker,
             "current_price": current_price,
             "ma20": ma20,

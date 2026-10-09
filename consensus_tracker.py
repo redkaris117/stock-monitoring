@@ -90,7 +90,14 @@ def evaluate_consensus_change(
     new_tp = new_info.get("target_price")
     curr_p = new_info.get("current_price")
     
-    curr_symbol = "₩" if market == "KR" else "$"
+    if market == "KR":
+        curr_symbol = "₩"
+    elif ".HK" in code:
+        curr_symbol = "HK$"
+    elif any(x in code for x in [".SS", ".SZ"]):
+        curr_symbol = "¥"
+    else:
+        curr_symbol = "$"
     today_str = datetime.now().strftime("%Y-%m-%d")
     today_short = datetime.now().strftime("%m/%d")
 
@@ -129,6 +136,10 @@ def evaluate_consensus_change(
     if new_tp:
         if market == "KR":
             target_price_str = f"₩{int(round(new_tp)):,}"
+        elif ".HK" in code:
+            target_price_str = f"HK${new_tp:,.2f}"
+        elif any(x in code for x in [".SS", ".SZ"]):
+            target_price_str = f"¥{new_tp:,.2f}"
         else:
             target_price_str = f"${new_tp:,.2f}"
 
